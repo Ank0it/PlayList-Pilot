@@ -57,6 +57,26 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // YouTube viewer custom colors
+        "video-card": "hsl(var(--video-card))",
+        "video-card-hover": "hsl(var(--video-card-hover))",
+        "progress-bg": "hsl(var(--progress-bg))",
+        "progress-fill": "hsl(var(--progress-fill))",
+        "progress-watched": "hsl(var(--progress-watched))",
+      },
+      backgroundImage: {
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-card": "var(--gradient-card)",
+        "gradient-hero": "var(--gradient-hero)",
+      },
+      boxShadow: {
+        "card": "var(--shadow-card)",
+        "video": "var(--shadow-video)",
+        "glow": "var(--shadow-glow)",
+      },
+      transitionTimingFunction: {
+        "smooth": "var(--transition-smooth)",
+        "bounce": "var(--transition-bounce)",
       },
       borderRadius: {
         lg: "var(--radius)",
