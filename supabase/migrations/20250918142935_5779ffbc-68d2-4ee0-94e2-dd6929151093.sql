@@ -1,0 +1,2 @@
+-- Create edge function for YouTube API calls
+-- This will handle CORS and API key management securely
