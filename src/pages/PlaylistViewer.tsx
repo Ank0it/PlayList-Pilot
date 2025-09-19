@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,14 @@ interface WatchProgress {
   completed: boolean;
 }
 
+// Declare YouTube API types
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
+
 const PlaylistViewer = () => {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [playlist, setPlaylist] = useState<PlaylistData | null>(null);
@@ -38,6 +46,99 @@ const PlaylistViewer = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<Record<string, WatchProgress>>({});
   const { toast } = useToast();
+  const playerRef = useRef<HTMLIFrameElement>(null);
+
+  // YouTube Player API integration
+  useEffect(() => {
+    // Load YouTube Player API
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    }
+  }, []);
+
+  // Track video progress automatically
+  useEffect(() => {
+    if (!playlist || !playlist.videos[currentVideoIndex]) return;
+
+    const currentVideo = playlist.videos[currentVideoIndex];
+    let progressInterval: NodeJS.Timeout;
+    let player: any = null;
+
+    const initializePlayer = () => {
+      if (window.YT && window.YT.Player && playerRef.current) {
+        // Find the iframe inside the container
+        const iframe = playerRef.current.querySelector('iframe');
+        if (iframe) {
+          player = new window.YT.Player(iframe, {
+            events: {
+              onStateChange: (event: any) => {
+                if (event.data === window.YT.PlayerState.PLAYING) {
+                  // Start tracking progress
+                  progressInterval = setInterval(() => {
+                    if (player && player.getCurrentTime && player.getDuration) {
+                      const currentTime = player.getCurrentTime();
+                      const duration = player.getDuration();
+                      
+                      if (duration > 0) {
+                        setProgress(prev => ({
+                          ...prev,
+                          [currentVideo.id]: {
+                            videoId: currentVideo.id,
+                            currentTime,
+                            duration,
+                            completed: currentTime / duration > 0.9 // 90% watched = completed
+                          }
+                        }));
+                      }
+                    }
+                  }, 1000);
+                } else {
+                  // Pause tracking
+                  if (progressInterval) {
+                    clearInterval(progressInterval);
+                  }
+                }
+
+                // Auto-advance when video ends
+                if (event.data === window.YT.PlayerState.ENDED) {
+                  // Mark as completed
+                  setProgress(prev => ({
+                    ...prev,
+                    [currentVideo.id]: {
+                      videoId: currentVideo.id,
+                      currentTime: player?.getDuration() || 0,
+                      duration: player?.getDuration() || 0,
+                      completed: true
+                    }
+                  }));
+
+                  // Auto-advance to next video
+                  setTimeout(() => {
+                    if (currentVideoIndex < playlist.videos.length - 1) {
+                      setCurrentVideoIndex(currentVideoIndex + 1);
+                    }
+                  }, 1000);
+                }
+              }
+            }
+          });
+        }
+      }
+    };
+
+    // Initialize player after a short delay to ensure iframe is loaded
+    const timeout = setTimeout(initializePlayer, 1000);
+
+    return () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      clearTimeout(timeout);
+    };
+  }, [playlist, currentVideoIndex]);
 
   // Load progress from localStorage
   useEffect(() => {
@@ -370,10 +471,10 @@ const PlaylistViewer = () => {
 
         {/* Main Content - Video Player */}
         <div className="flex-1 flex flex-col">
-          <div className="flex-1 bg-black relative">
+          <div className="flex-1 bg-black relative" ref={playerRef}>
             <div className="aspect-video w-full h-full flex items-center justify-center">
               <iframe
-                src={`https://www.youtube.com/embed/${currentVideo.id}?autoplay=1&rel=0`}
+                src={`https://www.youtube.com/embed/${currentVideo.id}?autoplay=1&rel=0&enablejsapi=1&origin=${window.location.origin}`}
                 className="w-full h-full"
                 frameBorder="0"
                 allow="autoplay; encrypted-media"
