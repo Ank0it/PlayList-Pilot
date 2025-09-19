@@ -176,8 +176,36 @@ const PlaylistViewer = () => {
     setCurrentVideoIndex(index);
   };
 
+  const markVideoAsCompleted = (videoId: string) => {
+    setProgress(prev => ({
+      ...prev,
+      [videoId]: {
+        ...prev[videoId],
+        videoId,
+        currentTime: 0,
+        duration: 0,
+        completed: true
+      }
+    }));
+  };
+
+  const toggleVideoCompletion = (videoId: string) => {
+    setProgress(prev => {
+      const currentProgress = prev[videoId] || { videoId, currentTime: 0, duration: 0, completed: false };
+      return {
+        ...prev,
+        [videoId]: {
+          ...currentProgress,
+          completed: !currentProgress.completed
+        }
+      };
+    });
+  };
+
   const nextVideo = () => {
     if (playlist && currentVideoIndex < playlist.videos.length - 1) {
+      // Mark current video as completed when moving to next
+      markVideoAsCompleted(playlist.videos[currentVideoIndex].id);
       setCurrentVideoIndex(currentVideoIndex + 1);
     }
   };
@@ -302,9 +330,24 @@ const PlaylistViewer = () => {
                           }`}>
                             {video.title}
                           </h3>
-                          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            <span>{formatDuration(video.duration)}</span>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              <span>{formatDuration(video.duration)}</span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleVideoCompletion(video.id);
+                              }}
+                              className={`text-xs px-2 py-1 rounded transition-colors ${
+                                videoProgress.completed 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              {videoProgress.completed ? '✓ Done' : 'Mark Done'}
+                            </button>
                           </div>
                           
                           {videoProgress.currentTime > 0 && !videoProgress.completed && (
@@ -340,7 +383,7 @@ const PlaylistViewer = () => {
             </div>
           </div>
 
-          <div className="p-6 bg-gradient-card border-t border-border">
+            <div className="p-6 bg-gradient-card border-t border-border">
             <div className="flex items-center justify-between mb-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-bold mb-2 line-clamp-2">{currentVideo.title}</h1>
@@ -348,6 +391,14 @@ const PlaylistViewer = () => {
               </div>
               
               <div className="flex items-center gap-3 ml-6">
+                <Button
+                  variant="outline"
+                  onClick={() => toggleVideoCompletion(currentVideo.id)}
+                  className={getVideoProgress(currentVideo.id).completed ? 'bg-green-100 text-green-700' : ''}
+                >
+                  {getVideoProgress(currentVideo.id).completed ? '✓ Completed' : 'Mark as Done'}
+                </Button>
+                
                 <Button
                   variant="outline"
                   size="icon"
