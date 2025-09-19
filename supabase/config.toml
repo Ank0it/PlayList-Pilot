@@ -1,1 +1,20 @@
 project_id = "jxuojkfwbufcijfkxlvn"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54320
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://jxuojkfwbufcijfkxlvn.lovableproject.com"]
+jwt_expiry = 3600
+enable_signup = true
+enable_confirmations = false
+
+[functions.fetch-youtube-playlist]
+verify_jwt = false

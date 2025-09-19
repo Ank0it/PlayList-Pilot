@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Play, Pause, SkipForward, SkipBack, Search, Clock, List } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Video {
   id: string;
@@ -101,7 +102,7 @@ const PlaylistViewer = () => {
     ]
   };
 
-  const handleFetchPlaylist = () => {
+  const handleFetchPlaylist = async () => {
     if (!playlistUrl.trim()) {
       toast({
         title: "Please enter a playlist URL",
@@ -122,15 +123,37 @@ const PlaylistViewer = () => {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setPlaylist(mockPlaylistData);
-      setIsLoading(false);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-youtube-playlist', {
+        body: { playlistId }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch playlist');
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setPlaylist(data);
+      setCurrentVideoIndex(0); // Reset to first video
+      
       toast({
         title: "Playlist loaded successfully!",
-        description: `Found ${mockPlaylistData.videos.length} videos`
+        description: `Found ${data.videos.length} videos`
       });
-    }, 1500);
+    } catch (error) {
+      console.error('Error fetching playlist:', error);
+      toast({
+        title: "Failed to load playlist",
+        description: error instanceof Error ? error.message : "Please check the URL and try again",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getVideoProgress = (videoId: string) => {
